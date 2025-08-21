@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <!-- <meta viewport=""> -->
+        <meta name="viewport" content="width=device-width" />
+
+        <!-- <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+        <title>Welcome to ImageSpeaker</title>
+    </head>
+
+    <body class="bg-success-subtle">
+        <div class="container-sm text-center align-items-center">
+            <div class="row g-5">
+                <div class="col">
+                    <h1>Welcome to ImageSpeaker!</h1>
+                    <h3>Upload an image and have it read to you in a generated voice!</h3>
+                </div>
+            </div>
+
+            <div class="row g-5">
+                <div class="col bg-success rounded-4">
+                    <div class="p-4">
+                        <form class="row g-3" action="{{ url_for('homepage') }}" enctype="multipart/form-data" method="POST">
+                            <div class="col-sm-8">
+                                <label for="imageExtraction" class="form-label visually-hidden">Image</label>
+                                <input class="form-control form-control-lg" name="img" id="imageExtraction" type="file" accept="image/png, image/jpeg" value="Choose File:">
+                            </div>
+                            <div class="col-6 col-sm-4">
+                                <label for="upload-button" class="visually-hidden">Submit Button</label>
+                                <button type="submit" class="form-control form-control-lg btn btn-warning required" id="upload-button">Upload and Generate</button>
+                            </div>
+                        </form>
+                        
+                        <div>
+                            {% if img %}
+                            <div>
+                                <h2>Uploaded Image</h2>
+                            </div>
+                            <img alt="image for text extraction" src='{{ img }}'></img>
+
+                            <div>
+                                <h2>Extracted text...</h2>
+                            </div>
+                            
+                            <div>
+                                <p class="fs-4 text-reset">
+                                    {{ response }}
+                                </p>
+                            </div>
+
+                            <h2>Generated audio by Sesame AI</h2>
+
+                            <audio controls preload="auto">
+                                <source src='{{ audio }}' type="audio/wav" />
+                            </audio>
+
+                            {% else %}
+                            <div>
+                                <h2>Image will be shown here once uploaded...</h2>
+                            </div>
+
+                            <div>
+                                <h2>Text will be shown here</h2>
+                            </div>
+
+                            <div>
+                                <h2>Audio will be shown here</h2>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+    </body>
+</html>
