@@ -6,6 +6,7 @@ from IPython.display import Audio
 # from pydantic import BaseModel
 import google
 from google import genai
+from huggingface_hub import login
 # import google.auth
 # import google.auth.exceptions
 # from google.genai import types
@@ -23,6 +24,9 @@ AUDIO_FOLDER = os.path.join('static', 'audio')
 app.config['UPLOAD'] = UPLOAD_FOLDER
 app.config['AUDIO'] = AUDIO_FOLDER
 
+## login to HF
+login(token=os.getenv("HUGGING_FACE_TOKEN"))
+
 @app.route("/", methods=['GET', 'POST'])
 def homepage():
     if request.method == 'POST':
@@ -35,12 +39,17 @@ def homepage():
         response = extract_text(img=image)
         model = load_model()
         audio, sample_rate = generate_audio(model=model, text=response)
-        torchaudio.save(os.path.join(app.config['AUDIO'], f"audio_{filename}.wav"), sample_rate=sample_rate)
+        torchaudio.save(os.path.join(app.config['AUDIO'],
+                                     f"audio_{filename}.wav"),
+                                     sample_rate=sample_rate
+                                     )
         audio = os.path.join(app.config['AUDIO'], f"audio_{filename}.wav")
-        # torchaudio.save(f"./static/audio/audio_{filename}.wav", audio, sample_rate=sample_rate)
-        # audio = os.path.join("./static/audio/", f"audio_{filename}.wav")
 
-        return render_template('homepage.html', img=img, response=response, audio=audio)
+        return render_template('homepage.html',
+                               img=img,
+                               response=response, 
+                               audio=audio
+                               )
     return render_template('homepage.html')
 
 if __name__ == "__main__":
