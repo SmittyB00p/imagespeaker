@@ -15,7 +15,7 @@ from huggingface_hub import login
 # from vertexai.generative_models import GenerativeModel
 from flask import Flask, render_template, request, flash, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
-from utils import *
+from utils import load_model, extract_text, generate_audio
 
 app = Flask(__name__)
 
@@ -27,6 +27,9 @@ app.config['AUDIO'] = AUDIO_FOLDER
 ## login to HF
 login(token=os.getenv("HUGGING_FACE_TOKEN"))
 
+## loads model
+model = load_model()
+
 @app.route("/", methods=['GET', 'POST'])
 def homepage():
     if request.method == 'POST':
@@ -37,12 +40,23 @@ def homepage():
         
         image = Image.open(img)
         response = extract_text(img=image)
-        model = load_model()
+        
         audio, sample_rate = generate_audio(model=model, text=response)
-        torchaudio.save(os.path.join(app.config['AUDIO'],
-                                     f"audio_{filename}.wav"),
-                                     sample_rate=sample_rate
-                                     )
+
+        if AUDIO_FOLDER:
+            torchaudio.save(
+                os.path.join(app.config['AUDIO'], f"audio_{filename}.wav"),
+                sample_rate=sample_rate
+                )
+        else:
+            os.chdir('static')
+            os.mkdir('audio')
+            torchaudio.save(
+                os.path.join('audio', f"audio_{filename}.wav"),
+                sample_rate=sample_rate
+                )
+            os.chdir('..')
+            
         audio = os.path.join(app.config['AUDIO'], f"audio_{filename}.wav")
 
         return render_template('homepage.html',
