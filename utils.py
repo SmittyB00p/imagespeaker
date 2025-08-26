@@ -1,21 +1,28 @@
 import os
 import torch
+import io
+from io import BytesIO
 import google
 import regex as re
 from google import genai
-# import google.auth
-# import google.auth.exceptions
-# from google.genai import types
-# import vertexai
-# from vertexai import generative_models
-# from vertexai.generative_models import GenerativeModel
+import boto3
+import sys
+sys.path.insert(0, 'csm')
+
 from csm.models import ModelArgs, Model
 from csm.generator import Generator, load_csm_1b
 
 device = torch.device('gpu' if torch.cuda.is_available() else 'cpu')
 
+GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+bucket_name = 'sagemaker-studio-533267313146-gevqreh7pje'
+file_key = 'model_bestval.pt'
+
 def extract_text(img):
-    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    client = genai.Client(api_key=GOOGLE_API_KEY)
     
     response = client.models.generate_content(
         model='gemini-2.0-flash',
@@ -39,20 +46,24 @@ def extract_text(img):
 
 def load_model():
     try:
-        config = ModelArgs(
-                backbone_flavor="llama-1B",
-                decoder_flavor="llama-100M",
-                text_vocab_size=128256,
-                audio_vocab_size=2051,
-                audio_num_codebooks=32
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name='us-east-1'
+        )
+
+        weights = s3_client.download_file(bucket_name, file_key, file_key)
+        buffer = BytesIO()
+        torch.save(weights, buffer)
+
+        model = Model()
+        
+        model.load_state_dict(
+            state_dict=torch.load(file_key, map_location=device)
             )
-        model = Model(config).to(
-            device,
-            dtype=torch.bfloat16
-            )
-        state_dict = torch.load('./model_weights/model_bestval.pt', map_location=device)
-        model = model.load_state_dict(state_dict)
         return model
+    
     except:
         model = load_csm_1b(device)
         return model
@@ -62,6 +73,6 @@ def generate_audio(model, text):
     model.eval()
     generator_ = Generator(model)
     sample_rate = generator_.sample_rate
-    audio = generator_.generate(text=text, speaker=1, topk=70)
+    audio = generator_.generate(text=text, speaker=1, temperature=0.7, topk=70)
     audio = audio.unsqueeze(0).cpu()
     return audio, sample_rate
