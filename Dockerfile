@@ -12,6 +12,8 @@ FROM python:${PYTHON_VERSION}-slim AS base
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
 
+ENV NO_TORCH_COMPILE=1
+
 ENV BNB_CUDA_VERSION=none
 
 # Keeps Python from buffering stdout and stderr to avoid situations where
