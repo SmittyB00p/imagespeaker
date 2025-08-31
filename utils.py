@@ -1,25 +1,25 @@
 import os
 import torch
+from transformers import CsmForConditionalGeneration, AutoProcessor
 import io
 from io import BytesIO
-import google
 import regex as re
 from google import genai
 import boto3
-import sys
-sys.path.insert(0, 'csm')
-
-from csm.models import ModelArgs, Model
-from csm.generator import Generator, load_csm_1b
+from huggingface_hub import login
 
 device = torch.device('gpu' if torch.cuda.is_available() else 'cpu')
 
+HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_HUB_TOKEN")
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 
 bucket_name = 'sagemaker-studio-533267313146-gevqreh7pje'
 file_key = 'model_bestval.pt'
+
+## login to HF
+login(token=HUGGINGFACE_TOKEN)
 
 def extract_text(img):
     client = genai.Client(api_key=GOOGLE_API_KEY)
@@ -45,19 +45,22 @@ def extract_text(img):
     return json_response
 
 def load_model():
+    model = CsmForConditionalGeneration.from_pretrained('sesame/csm-1b', 
+                                                        device_map=device,
+                                                        token=HUGGINGFACE_TOKEN
+                                                        )
+
     try:
         s3_client = boto3.client(
             's3',
             aws_access_key_id=AWS_ACCESS_KEY_ID,
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-            region_name='us-east-1'
+            region_name='us-east-2'
         )
 
         weights = s3_client.download_file(bucket_name, file_key, file_key)
         buffer = BytesIO()
         torch.save(weights, buffer)
-
-        model = Model()
         
         model.load_state_dict(
             state_dict=torch.load(file_key, map_location=device)
@@ -65,14 +68,22 @@ def load_model():
         return model
     
     except:
-        model = load_csm_1b(device)
         return model
 
 def generate_audio(model, text):
-    model = model
-    model.eval()
-    generator_ = Generator(model)
-    sample_rate = generator_.sample_rate
-    audio = generator_.generate(text=text, speaker=1, temperature=0.7, topk=70)
-    audio = audio.unsqueeze(0).cpu()
-    return audio, sample_rate
+    processor = AutoProcessor.from_pretrained('sesame/csm-1b',
+                                              token=HUGGINGFACE_TOKEN
+                                              )
+    conversation = [
+        {'role': 0,
+         'content':[{'type': 'text','text':text}]}
+    ]
+
+    inputs = processor.apply_chat_template(
+        conversation,
+        tokenize=True,
+        return_dict=True,
+    ).to(device)
+
+    audio = model.generate(**inputs, output_audio=True)
+    return audio
