@@ -16,12 +16,16 @@
 #       - 8000:8000
 
 services:
-  web:
+  server:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - .:/imagespeaker
     ports:
-      - "8000:8000"
+      - 8000:8000
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
